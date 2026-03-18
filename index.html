@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShadowPoint Recovery Intake</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShadowPoint Recovery</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     body {
@@ -13,19 +13,13 @@
       margin: 0;
       padding: 15px;
     }
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-    }
     .card {
+      max-width: 720px;
+      margin: 0 auto 15px auto;
       background: #151515;
-      border: 1px solid #2c2c2c;
+      border: 1px solid #333;
       border-radius: 12px;
       padding: 16px;
-      margin-bottom: 15px;
-    }
-    h1, h2, p {
-      margin-top: 0;
     }
     input, textarea, button {
       width: 100%;
@@ -33,61 +27,79 @@
       margin: 6px 0;
       font-size: 16px;
       border-radius: 10px;
-      border: 1px solid #333;
       box-sizing: border-box;
     }
     input, textarea {
-      background: #0f0f0f;
+      background: #101010;
       color: #fff;
+      border: 1px solid #333;
     }
     button {
       background: #c9a44c;
       color: #111;
-      font-weight: bold;
       border: none;
+      font-weight: bold;
     }
-    .msg {
-      margin-top: 10px;
-      font-size: 14px;
-      white-space: pre-wrap;
-    }
-    .ok { color: #8be28b; }
-    .bad { color: #ff7b7b; }
+    .muted { color: #bbb; }
+    .ok { color: #8be28b; font-weight: bold; }
+    .bad { color: #ff7a7a; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <h1>Recovery Request</h1>
-      <p>Submit information for fugitive recovery.</p>
-    </div>
 
-    <div class="card">
-      <input id="defendant_name" placeholder="Defendant Name">
-      <input id="last_known_location" placeholder="Last Known Location">
-      <input id="case_bond_information" placeholder="Bond / Case Information">
-      <input id="requester_name_agency" placeholder="Your Name / Agency">
-      <input id="requester_phone" placeholder="Phone Number">
-      <textarea id="case_notes" rows="5" placeholder="Case Notes / Additional Info"></textarea>
+  <div class="card">
+    <h1>Recovery Request</h1>
+    <div id="topStatus" class="muted">START</div>
+  </div>
 
-      <button type="button" onclick="submitRecovery()">Submit Recovery Request</button>
+  <div class="card">
+    <input id="defendant_name" placeholder="Defendant Name">
+    <input id="last_known_location" placeholder="Last Known Location">
+    <input id="case_bond_information" placeholder="Bond / Case Information">
+    <input id="requester_name_agency" placeholder="Your Name / Agency">
+    <input id="requester_phone" placeholder="Phone Number">
+    <textarea id="case_notes" rows="5" placeholder="Case Notes / Additional Info"></textarea>
 
-      <div id="msg" class="msg">Waiting.</div>
-    </div>
+    <button type="button" onclick="submitRecovery()">Submit Recovery Request</button>
+
+    <div id="msg" class="muted">WAITING</div>
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      "https://hulcxftmoazrvkjqqyuk.supabase.co",
-      "sb_publishable_yFa3GaBBsHYn-VfK8ivRJQ__vuu_q2T"
-    );
+    var SUPABASE_URL = "https://hulcxftmoazrvkjqqyuk.supabase.co";
+    var SUPABASE_KEY = "sb_publishable_yFa3GaBBsHYn-VfK8ivRJQ__vuu_q2T";
+    var client = null;
+
+    var topStatus = document.getElementById("topStatus");
+    var msg = document.getElementById("msg");
+
+    topStatus.innerText = "SCRIPT RAN";
+
+    if (!window.supabase) {
+      topStatus.innerText = "SUPABASE SCRIPT FAILED TO LOAD";
+      topStatus.className = "bad";
+    } else {
+      try {
+        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        topStatus.innerText = "SUPABASE READY";
+        topStatus.className = "ok";
+      } catch (e) {
+        topStatus.innerText = "SUPABASE INIT FAILED: " + e.message;
+        topStatus.className = "bad";
+      }
+    }
 
     async function submitRecovery() {
-      const msg = document.getElementById("msg");
-      msg.textContent = "Submitting...";
-      msg.className = "msg";
+      msg.innerText = "BUTTON CLICKED";
+      msg.className = "muted";
 
-      const payload = {
+      if (!client) {
+        msg.innerText = "NO SUPABASE CLIENT";
+        msg.className = "bad";
+        return;
+      }
+
+      var payload = {
         defendant_name: document.getElementById("defendant_name").value.trim(),
         last_known_location: document.getElementById("last_known_location").value.trim(),
         case_bond_information: document.getElementById("case_bond_information").value.trim(),
@@ -97,19 +109,21 @@
         source_page: "recovery_form"
       };
 
+      msg.innerText = "SUBMITTING...";
+
       try {
-        const result = await supabase
+        var result = await client
           .from("recovery_requests")
           .insert([payload]);
 
         if (result.error) {
-          msg.textContent = "FAILED: " + result.error.message;
-          msg.className = "msg bad";
+          msg.innerText = "FAILED: " + result.error.message;
+          msg.className = "bad";
           return;
         }
 
-        msg.textContent = "Submitted successfully.";
-        msg.className = "msg ok";
+        msg.innerText = "SUBMITTED SUCCESSFULLY";
+        msg.className = "ok";
 
         document.getElementById("defendant_name").value = "";
         document.getElementById("last_known_location").value = "";
@@ -117,11 +131,14 @@
         document.getElementById("requester_name_agency").value = "";
         document.getElementById("requester_phone").value = "";
         document.getElementById("case_notes").value = "";
-      } catch (err) {
-        msg.textContent = "ERROR: " + err.message;
-        msg.className = "msg bad";
+      } catch (e) {
+        msg.innerText = "ERROR: " + e.message;
+        msg.className = "bad";
       }
     }
+
+    window.submitRecovery = submitRecovery;
   </script>
+
 </body>
 </html>
