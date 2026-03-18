@@ -1,13 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShadowPoint Recovery Intake</title>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,24 +13,20 @@
       margin: 0;
       padding: 15px;
     }
-
     .container {
-      max-width: 700px;
-      margin: auto;
+      max-width: 720px;
+      margin: 0 auto;
     }
-
     .card {
       background: #151515;
       border: 1px solid #2c2c2c;
       border-radius: 12px;
-      padding: 15px;
+      padding: 16px;
       margin-bottom: 15px;
     }
-
-    h1, h2 {
+    h1, h2, p {
       margin-top: 0;
     }
-
     input, textarea, button {
       width: 100%;
       padding: 12px;
@@ -43,105 +36,92 @@
       border: 1px solid #333;
       box-sizing: border-box;
     }
-
     input, textarea {
       background: #0f0f0f;
       color: #fff;
     }
-
     button {
       background: #c9a44c;
       color: #111;
       font-weight: bold;
       border: none;
     }
-
     .msg {
       margin-top: 10px;
       font-size: 14px;
+      white-space: pre-wrap;
     }
-
     .ok { color: #8be28b; }
     .bad { color: #ff7b7b; }
   </style>
-
 </head>
-
 <body>
+  <div class="container">
+    <div class="card">
+      <h1>Recovery Request</h1>
+      <p>Submit information for fugitive recovery.</p>
+    </div>
 
-<div class="container">
+    <div class="card">
+      <input id="defendant_name" placeholder="Defendant Name">
+      <input id="last_known_location" placeholder="Last Known Location">
+      <input id="case_bond_information" placeholder="Bond / Case Information">
+      <input id="requester_name_agency" placeholder="Your Name / Agency">
+      <input id="requester_phone" placeholder="Phone Number">
+      <textarea id="case_notes" rows="5" placeholder="Case Notes / Additional Info"></textarea>
 
-  <div class="card">
-    <h1>Recovery Request</h1>
-    <p>Submit information for fugitive recovery.</p>
+      <button type="button" onclick="submitRecovery()">Submit Recovery Request</button>
+
+      <div id="msg" class="msg">Waiting.</div>
+    </div>
   </div>
 
-  <div class="card">
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://hulcxftmoazrvkjqqyuk.supabase.co",
+      "sb_publishable_yFa3GaBBsHYn-VfK8ivRJQ__vuu_q2T"
+    );
 
-```
-<input id="defendant_name" placeholder="Defendant Name">
-<input id="last_known_location" placeholder="Last Known Location">
-<input id="case_bond_information" placeholder="Bond / Case Info">
+    async function submitRecovery() {
+      const msg = document.getElementById("msg");
+      msg.textContent = "Submitting...";
+      msg.className = "msg";
 
-<input id="requester_name_agency" placeholder="Your Name / Agency">
-<input id="requester_phone" placeholder="Phone Number">
+      const payload = {
+        defendant_name: document.getElementById("defendant_name").value.trim(),
+        last_known_location: document.getElementById("last_known_location").value.trim(),
+        case_bond_information: document.getElementById("case_bond_information").value.trim(),
+        requester_name_agency: document.getElementById("requester_name_agency").value.trim(),
+        requester_phone: document.getElementById("requester_phone").value.trim(),
+        case_notes: document.getElementById("case_notes").value.trim(),
+        source_page: "recovery_form"
+      };
 
-<textarea id="case_notes" rows="5" placeholder="Case Notes / Additional Info"></textarea>
+      try {
+        const result = await supabase
+          .from("recovery_requests")
+          .insert([payload]);
 
-<button onclick="submitRecovery()">Submit Recovery Request</button>
+        if (result.error) {
+          msg.textContent = "FAILED: " + result.error.message;
+          msg.className = "msg bad";
+          return;
+        }
 
-<div id="msg" class="msg"></div>
-```
+        msg.textContent = "Submitted successfully.";
+        msg.className = "msg ok";
 
-  </div>
-
-</div>
-
-<script>
-const supabase = window.supabase.createClient(
-  "https://hulcxftmoazrvkjqqyuk.supabase.co",
-  "sb_publishable_yFa3GaBBsHYn-VfK8ivRJQ__vuu_q2T"
-);
-
-async function submitRecovery() {
-  const msg = document.getElementById("msg");
-  msg.textContent = "Submitting...";
-  msg.className = "msg";
-
-  const payload = {
-    defendant_name: document.getElementById("defendant_name").value,
-    last_known_location: document.getElementById("last_known_location").value,
-    case_bond_information: document.getElementById("case_bond_information").value,
-    requester_name_agency: document.getElementById("requester_name_agency").value,
-    requester_phone: document.getElementById("requester_phone").value,
-    case_notes: document.getElementById("case_notes").value,
-    source_page: "recovery_form"
-  };
-
-  try {
-    const { error } = await supabase
-      .from("recovery_requests")
-      .insert([payload]);
-
-    if (error) {
-      msg.textContent = "FAILED: " + error.message;
-      msg.className = "msg bad";
-      return;
+        document.getElementById("defendant_name").value = "";
+        document.getElementById("last_known_location").value = "";
+        document.getElementById("case_bond_information").value = "";
+        document.getElementById("requester_name_agency").value = "";
+        document.getElementById("requester_phone").value = "";
+        document.getElementById("case_notes").value = "";
+      } catch (err) {
+        msg.textContent = "ERROR: " + err.message;
+        msg.className = "msg bad";
+      }
     }
-
-    msg.textContent = "Submitted successfully.";
-    msg.className = "msg ok";
-
-    // clear form
-    document.querySelectorAll("input, textarea").forEach(el => el.value = "");
-
-  } catch (err) {
-    msg.textContent = "ERROR: " + err.message;
-    msg.className = "msg bad";
-  }
-}
-</script>
-
+  </script>
 </body>
 </html>
-
